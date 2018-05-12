@@ -9,7 +9,7 @@ from powerspectrum import GalaxyPowerSpectrum
 sys.dont_write_bytecode = True
 def degenline(beta, fNL):
     p = lmfit.Parameters()
-    p.add_many(('fNL', fNL, True, -200.0, 100.0),
+    p.add_many(('fNL', fNL, True, -500.0, 100.0),
                ('beta', beta, False, 0.0, 0.1)
                )
     PowSpec_g_ref = GalaxyPowerSpectrum(a, k, z_p, z_i, 0.0, 0.0, 0.0, False, True, True, **cosmo)
@@ -31,34 +31,34 @@ if __name__ == "__main__":
     
     z_cmb = 1100; z_p = 10.0**7; z_i = z_cmb; z_f = 0.0
     lga = np.linspace(np.log(1./(1 + z_i)), np.log(1./(1. + z_f)), 100); a = np.exp(lga)
-    lgk = np.linspace(np.log(1e-4), np.log(1e0), 100); k = np.exp(lgk)
+    lgk = np.linspace(np.log(1e-5), np.log(1e1), 100); k = np.exp(lgk)
     
-    beta = 0.05; fNL = -10.0
-    dbeta = beta/25.
-    gbeta_array=np.array([0.0]); gbeta_array = np.append(gbeta_array, np.arange(dbeta, 2. * beta, dbeta)); gbeta_array = np.append(gbeta_array, 0.1)
-    #gbeta_array=np.arange(0.0, 0.1, 0.01)
-    print gbeta_array
+#    beta = 0.05; fNL = -10.0
+#    dbeta = beta/25.
+#    gbeta_array=np.array([0.0]); gbeta_array = np.append(gbeta_array, np.arange(dbeta, 2. * beta, dbeta)); gbeta_array = np.append(gbeta_array, 0.1)
+#    #gbeta_array=np.arange(0.0, 0.1, 0.01)
+#    print gbeta_array
+#
+#    beta_array = np.empty(len(gbeta_array)); fNL_array =np.empty(len(gbeta_array))
+#    for i in range(len(gbeta_array)):
+#        beta_bestfit, fNL_bestfit = degenline(gbeta_array[i], fNL)
+#        beta_array[i] = beta_bestfit; fNL_array[i] = fNL_bestfit
+#
+#    degen_data = beta_array, fNL_array
+#    np.save('Degen_data/beta_fNL_degen_clstr.npy', degen_data)
 
-    beta_array = np.empty(len(gbeta_array)); fNL_array =np.empty(len(gbeta_array))
-    for i in range(len(gbeta_array)):
-        beta_bestfit, fNL_bestfit = degenline(gbeta_array[i], fNL)
-        beta_array[i] = beta_bestfit; fNL_array[i] = fNL_bestfit
-
-    degen_data = beta_array, fNL_array
-    np.save('Degen_data/beta_fNL_degen_clstr.npy', degen_data)
-
-    beta_bestfit = 0.0; fNL_bestfit = 0.0
-    Pg_LCDM = GalaxyPowerSpectrum(a, k, z_p, z_i, 0.0, 0.0, 0.0, False, False, False, **cosmo)
+    beta_bestfit, fNL_bestfit = degenline(0.05, -10)
+    Pg_LCDM = GalaxyPowerSpectrum(a, k, z_p, z_i, 0.0, 0.0, 0.0, False, True, False, **cosmo)
 
     plt.figure()
-    plt.semilogx(k,  GalaxyPowerSpectrum(a, k, z_p, z_i, 0.08, 0.0, 0.0, False, False, False, **cosmo)/Pg_LCDM, '-.', label = 'beta: %s' %beta_bestfit)
-    plt.semilogx(k,  GalaxyPowerSpectrum(a, k, z_p, z_i, 0.08, 0.15, 0.0, False, False, False, **cosmo)/Pg_LCDM, '-.', label = 'fNL:%s' %fNL_bestfit)
-    #    plt.semilogx(k,  GalaxyPowerSpectrum(a, k, z_p, z_i, 0.08, beta_bestfit, fNL_bestfit, False, False, False, **cosmo)/Pg_LCDM, '--', label = 'beta: %s - fNL: %s' %(beta_bestfit, fNL_bestfit))
+    plt.semilogx(k,  GalaxyPowerSpectrum(a, k, z_p, z_i, 0.08, beta_bestfit, 0.0, False, True, True, **cosmo)/Pg_LCDM, '-.', label = 'beta: %s' %beta_bestfit)
+    plt.semilogx(k,  GalaxyPowerSpectrum(a, k, z_p, z_i, 0.08, 0.0, fNL_bestfit, False, True, True, **cosmo)/Pg_LCDM, '-.', label = 'fNL:%s' %fNL_bestfit)
+    plt.semilogx(k,  GalaxyPowerSpectrum(a, k, z_p, z_i, 0.08, beta_bestfit, fNL_bestfit, False, True, True, **cosmo)/Pg_LCDM, '--', label = 'beta: %s - fNL: %s' %(beta_bestfit, fNL_bestfit))
     plt.axvline(1./H0)
     plt.axhline(1.0, linestyle = '--')
     plt.ylim((0.0, 3))
     plt.legend()
     plt.show()
-
+#
 
 

@@ -35,7 +35,8 @@ def equations(vars, a, k, c2_q, alpha, beta, Background, clustering, smoothing):
         dhda = (-h/2. * (3. * x**2 - 3. * y**2 + r**2 + 3.))/a
         
         # some definitions
-        Omega_m = 1. - x**2 - y**2 - r**2 - v**2; Omega_q = x**2 + y**2
+        Omega_m = 1. - x**2 - y**2; Omega_q = x**2 + y**2
+        Omega_c = 1.0 - x**2 - y**2 - r**2 - v**2
         w_q = (x**2 - y**2)/(x**2 + y**2); w_eff = w_q * Omega_q
 
         w_q_dash = (2. * a)/Omega_q * (x * dxda * (1. - w_q) - y * dyda * (1. + w_q))
@@ -44,7 +45,7 @@ def equations(vars, a, k, c2_q, alpha, beta, Background, clustering, smoothing):
         phi_dash = np.sqrt(6) * x
 
         #  coupling terms
-        Q_m = np.sqrt(2./3.) * beta * x * Omega_m; Q_q = - Q_m
+        Q_m = np.sqrt(2. * (8. * np.pi * G)/3.) * beta * phi_dash * Omega_m; Q_q = - Q_m
 
         # some definitions
         w_m_eff = - Q_m/(3. * h * Omega_m); w_q_eff = w_q - Q_q/(3. * h * Omega_q)
@@ -95,7 +96,7 @@ def equations(vars, a, k, c2_q, alpha, beta, Background, clustering, smoothing):
                        + a * Q_m/Omega_m * (3. + Q_m/(h * Omega_m)) * u_m
                        + delta_Q_m/(Omega_m * h)
                        )
-        dDelta_mda = (c*k)**2/(a**2 * h) * u_m + 9./2. * h * (1. + w_eff) * (u_m - u_tot) +  RHS_Delta_m
+        dDelta_mda = k**2/(a**2 * h) * u_m + 9./2. * h * (1. + w_eff) * (u_m - u_tot) +  RHS_Delta_m
 
         if alpha == 0.0 and beta == 0.0:
             dDelta_qda = 0.0; du_qda = 0.0
@@ -110,12 +111,12 @@ def equations(vars, a, k, c2_q, alpha, beta, Background, clustering, smoothing):
                                + a * Q_q/Omega_q * (3. * (1. + w_q) + Q_q/(h * Omega_q)) * u_q
                                + delta_Q_q/(Omega_q * h)
                                )
-                dDelta_qda = 3. * w_q/a * Delta_q +(c*k)**2/(a**2 * h) * (1. + w_q) * u_q + 9./2. * h * (1. + w_q) * (1. + w_eff) * (u_q - u_tot) +  RHS_Delta_q
+                dDelta_qda = 3. * w_q/a * Delta_q + k**2/(a**2 * h) * (1. + w_q) * u_q + 9./2. * h * (1. + w_q) * (1. + w_eff) * (u_q - u_tot) +  RHS_Delta_q
                 #- du_q/da
                 RHS_u_q = 1./((1. + w_q) * Omega_q * a * h) * (Q_q * (u_tot - u_q) + f_q)
                 if smoothing:
                     #-: as an assumption we set phi' = 0.0 since
-                    du_qda =  -u_q/a  + Phi/(a**2 * h) + RHS_u_q
+                    dDelta_qda = 0.0; du_qda =  -u_q/a  + Phi/(a**2 * h) + RHS_u_q
                 else:
                     du_qda =  -u_q/a - c2_q/((1. + w_q) * a**2 * h) * Delta_q + Phi/(a**2 * h) + RHS_u_q # check Phi sign ()
 

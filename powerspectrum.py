@@ -22,7 +22,7 @@ def FTW(R, k):
     return 3*(np.sin(k*R)-k*R*np.cos(k*R)) / (k*R)**3
 
 def growth(a, **cosmo):
-    Omega0_q, Omega0_c, Omega0_b = cosmo['Omega0_q'], cosmo['Omega0_c'], cosmo['Omega0_b']; Omega0_m = Omega0_c# + Omega0_b
+    Omega0_q, Omega0_c, Omega0_b = cosmo['Omega0_q'], cosmo['Omega0_c'], cosmo['Omega0_b']; Omega0_m = Omega0_c + Omega0_b
 
     Hubble_a = np.sqrt(Omega0_m/(a * a * a) + (1.0 - Omega0_m - Omega0_q) / (a * a) + Omega0_q)
     growth_int = lambda a: (a/(Omega0_m + a * (1.0 - Omega0_m - Omega0_q) + a * a * a * Omega0_q))**1.5
@@ -30,7 +30,7 @@ def growth(a, **cosmo):
     return Hubble_a * quad(growth_int, 0, a)[0]
 
 def PowerSpectrum_m(a, k, z_p, z_i, alpha, beta, Background, clustering, smoothing, **cosmo):
-    H0 = cosmo['H0']
+    H0 = cosmo['H0']; cH0 = H0/c
     fname_ic = 'ICs/ic_%s_%s_zi_%s.npy'%(alpha, beta, z_i)
     
     if os.path.isfile(fname_ic):
@@ -39,8 +39,8 @@ def PowerSpectrum_m(a, k, z_p, z_i, alpha, beta, Background, clustering, smoothi
         ics = quintini(z_p, z_i, alpha, beta, **cosmo);
         np.save(fname_ic, ics)
 
-    Delta_m_i = np.array([initconds(ics, k[i], z_p, z_i, alpha, beta, Background, clustering, **cosmo)[5] for i in range(len(k))])
-    vars = [odeint(equations, initconds(ics, k[i], z_p, z_i, alpha, beta, Background, clustering, **cosmo), a, args = (k[i], c2_q, alpha, beta, Background, clustering, smoothing), mxstep = 10**3) for i in range(len(k))]
+    Delta_m_i = np.array([initconds(ics, k[i]/cH0, z_p, z_i, alpha, beta, Background, clustering, **cosmo)[5] for i in range(len(k))])
+    vars = [odeint(equations, initconds(ics, k[i]/cH0, z_p, z_i, alpha, beta, Background, clustering, **cosmo), a, args = (k[i]/cH0, c2_q, alpha, beta, Background, clustering, smoothing), mxstep = 10**3) for i in range(len(k))]
     
     vars_z = odeint(equations, initconds(ics, 1./H0, z_p, z_i, alpha, beta, Background, clustering, **cosmo), a, args = (1./H0, c2_q, alpha, beta, Background, clustering,smoothing), mxstep = 10**3)
     
@@ -49,48 +49,47 @@ def PowerSpectrum_m(a, k, z_p, z_i, alpha, beta, Background, clustering, smoothi
     Delta_m_z= vars_z[:,5]; D_m = (Delta_m_z/Delta_m_z[0])/a
 
     ##--Power Spectrum calculations ------
-    amp_integrand = k**(2+sp_ind)*Delta_m**2 * FTW(8, k)**2; amp_integral = trapz(amp_integrand, k)
-    amp_0 = 2*np.pi**2/amp_integral; amp = amp_0*s_8**2
-    
-    #PowSpec_m = k**sp_ind * Delta_m**2 * amp;
+#    amp_integrand = k**(2+sp_ind)*Delta_m**2 * FTW(8, k)**2; amp_integral = trapz(amp_integrand, k)
+#    amp_0 = 2*np.pi**2/amp_integral; amp = amp_0*s_8**2
+#    PowSpec_m = k**sp_ind * Delta_m**2 * amp;
+
     PowSpec_m = Delta_m**2
     
-    sigma_integrand = k**2 * PowSpec_m * FTW(8., k)**2
-    s_8_check = pow(trapz(sigma_integrand, k)/(2. * np.pi**2), 0.5)
+    sigma_integrand = (k/cH0)**2 * PowSpec_m * FTW(8., k/cH0)**2
+    s_8_check = pow(trapz(sigma_integrand, k/cH0)/(2. * np.pi**2), 0.5)
 
     print "s_8_calculated: ", s_8_check
     
     PowSpec_Data = k, PowSpec_m; D_m_Data = k, D_m_k
     #D_m_Data = a, D_m
-
     np.save('Data/Dm_%s_%s_z_%s_clsrt_%s_smth_%s.npy' %(alpha, beta, (1./a[-1] - 1.),clustering, smoothing), D_m_Data)
     np.save('Data/Pm_%s_%s_z_%s_clsrt_%s_smth_%s.npy' %(alpha, beta, (1./a[-1] - 1.),clustering, smoothing), PowSpec_Data)
     return D_m_k, PowSpec_m
 
 def GalaxyPowerSpectrum(a, k, z_p, z_i, alpha, beta, fNL, Background, clustering, smoothing, **cosmo):
     print 'running model:: beta: ',  beta, '  fNL: ',  fNL
-    Omega0_c, Omega0_b = cosmo['Omega0_c'], cosmo['Omega0_b']; Omega0_m = Omega0_c + Omega0_b; H0 = cosmo['H0']
+    Omega0_c, Omega0_b = cosmo['Omega0_c'], cosmo['Omega0_b']; Omega0_m = Omega0_c + Omega0_b; H0 = cosmo['H0']; cH0 = H0/c
     
     fname  = 'Data/Pm_%s_%s_z_%s_clsrt_%s_smth_%s.npy' %(alpha, beta, (1./a[-1] - 1.), clustering, smoothing)
-    fname_class  = 'class_data/Pm_%s_%s_z_%s_clsrt_%s.dat' %(alpha, beta, (1./a[-1] - 1.), clustering)
     fname_D = 'Data/Dm_%s_%s_z_%s_clsrt_%s_smth_%s.npy' %(alpha, beta, (1./a[-1] - 1.), clustering, smoothing)
     if os.path.isfile(fname):
-        PowSpec_m = np.loadtxt(fname_class, unpack = True)[1]; D_m = np.load(fname_D)[1]
+        PowSpec_m = np.load(fname)[1]; D_m = np.load(fname_D)[1]
     else:
         D_m, PowSpec_m = PowerSpectrum_m(a, k, z_p, z_i, alpha, beta, Background, clustering, smoothing, **cosmo)
-
+    #print D_m.max(), D_m.min()
     #k_class, PowSpec_m_class  = plt.loadtxt(fname_class, unpack=True); PowSpec_m = interp1d(k_class, PowSpec_m_class, kind='cubic')(k)
-    bias = b_g + 3 * (b_g - 1) * fNL * (delta_c * Omega0_m * H0**2)/((c*k)**2 * transfer_func(k, **cosmo) * D_m)
+    bias = b_g + 3 * (b_g - 1) * fNL * (delta_c * Omega0_m)/((k/cH0)**2 * transfer_func(k, **cosmo) * D_m)
     #bias = b_g + 3 * (b_g - 1) * fNL * (delta_c * Omega0_m * H0**2)/((c*k)**2 * transfer_func(k, **cosmo) * D_m[-1])
 
     PowSpec_g = bias**2 * PowSpec_m
     GalaxyPowSpec_Data = k, PowSpec_g
     #np.save('Data/Pg_%s_%s_fNL_%s_z_%s_clsrt_%s_smth_%s.npy' %(alpha, beta, fNL, (1./a[-1] - 1.),clustering, smoothing), GalaxyPowSpec_Data)
-    return k, PowSpec_g
+    return PowSpec_g
 
 #
 if __name__ == "__main__":
     cosmo = {'Omega0_q':  0.728815, 'Omega0_c': 0.2260002018, 'Omega0_b': 0.0451, 'Omega0_r': 8.47982e-05, 'H0': 70.3, 'n_s': 0.966 , 'A_s': 1.06, 'delta_H': 1.9 * 10**(-5)}
+    #cosmo = {'Omega0_q':  0.728815, 'Omega0_c':  0.2711, 'Omega0_b': 0.0, 'Omega0_r': 8.47982e-05, 'H0': 70.3, 'n_s': 0.966 , 'A_s': 1.06, 'delta_H': 1.9 * 10**(-5)}
     H0 = cosmo['H0']
 
     z_cmb = 1100
@@ -140,9 +139,14 @@ if __name__ == "__main__":
 #    kk, PowSpecg = GalaxyPowerSpectrum(a, k, z_p, z_i, 0.0, 0.0, -10.0, False, True, False, **cosmo)
 #    kk1, PowSpecg1 = GalaxyPowerSpectrum(a, k, z_p, z_i, 0.08, 0.05, -1.0, False, True, False, **cosmo)
     plt.figure()
-#    plt.loglog(kk, PowSpecg, '--', label = 'LCDM')
-#    plt.loglog(kk1, PowSpecg1, ':', label = 'qLCDM')
-    plt.loglog(k,  GalaxyPowerSpectrum(a, k, z_p, z_i, 0.0, 0.0, 0.0, False, True, False, **cosmo), '--', label = 'qCDM-beta: 0.05')
+    plt.loglog(k,  GalaxyPowerSpectrum(a, k, z_p, z_i, 0.0, 0.0, 0.0, False, False, False, **cosmo), '--', label = 'LCDM')
+#    plt.loglog(k,  GalaxyPowerSpectrum(a, k, z_p, z_i, 0.08, 0.0, 200.0, False, False, False, **cosmo), '-.', label = 'LCDM')
+#    plt.loglog(k,  GalaxyPowerSpectrum(a, k, z_p, z_i, 0.08, 0.01, 0.0, False, False, False, **cosmo), ':', label = 'qCDM')
+#    plt.loglog(k,  GalaxyPowerSpectrum(a, k, z_p, z_i, 0.08, 0.05, 0.0, False, False, False, **cosmo), ':', label = 'qCDM')
+    plt.loglog(k,  GalaxyPowerSpectrum(a, k, z_p, z_i, 0.08, 0.05, 0.0, False, True, True, **cosmo), '-.', label = 'qCDM')
+    #plt.loglog(k,  GalaxyPowerSpectrum(a, k, z_p, z_i, 0.08, 0.05, -100.0, False, True, True, **cosmo), '--', label = 'qCDM')
+
+    #    plt.loglog(k,  GalaxyPowerSpectrum(a, k, z_p, z_i, 0.08, 0.05, 0.0, False, True, False, **cosmo), '-.', label = 'qCDM-beta: 0.05')
 ###    plt.loglog(k,  GalaxyPowerSpectrum(a, k, z_p, z_i, 0.08, 0.05, 0.0, False, False, True, **cosmo), '--', label = 'qCDM-beta: 0.05-False')
 ###    plt.loglog(k,  GalaxyPowerSpectrum(a, k, z_p, z_i, 0.08, 0.05, 0.0, False, True, False, **cosmo), '--', label = 'qCDM-beta: 0.05-smoothing')
 ###    plt.loglog(k,  GalaxyPowerSpectrum(a, k, z_p, z_i, 0.08, 0.05, -10.0, False, True, **cosmo), '--', label = 'qCDM-beta: 0.05-fNL:-10')

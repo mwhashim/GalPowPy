@@ -96,23 +96,25 @@ def quintini(z_i, z_init, alpha, beta, **cosmo):
     
 #    ics_data = X_i, Y_i, R_i, V_i, h_i, w_q_i, Omega_q_i, Omega_m_i
 #    np.save('./ICs/ic_%s_%s_zi_%s.npy' %(alpha, beta, z_init), ics_data)
-
-    return X_i, Y_i, R_i, V_i, h_i, w_q_i, Omega_q_i, Omega_c_i
+    return X_i, Y_i, R_i, V_i, h_i, w_q_i, Omega_q_i, Omega_c_i, Omega_m_i
 
 if __name__ == "__main__":
-    cosmo = {'Omega0_q':  0.728815, 'Omega0_c': 0.2260002018, 'Omega0_b': 0.0451, 'Omega0_r': 8.47982e-05, 'H0': 0.1}
-    alpha = 0.08; beta = 0.05; 
+    cosmo = {'Omega0_q':  0.728815, 'Omega0_c': 0.2260002018, 'Omega0_b': 0.0451, 'Omega0_r': 8.47982e-05, 'H0': 1.0}
+    alpha = 0.08; beta = 0.05;
     z_i = 10**7; z_f = 0.0
     lga = np.linspace(np.log(1./(1 + z_i)), np.log(1./(1. + z_f)), 100); a = np.exp(lga); z = 1./a - 1.
     
     #quintini(10**7, 1100, alpha, beta, **cosmo)
 
-    Omega_q_i, Omega_c_i, Omega_m_i = quintini(z_i, z, alpha, beta, **cosmo)[6:]#, quintini(z_i, z, alpha, beta, **cosmo)[7]
+    w_q_i, Omega_q_i, Omega_m_i = quintini(z_i, z, alpha, beta, **cosmo)[5:]#, quintini(z_i, z, alpha, beta, **cosmo)[7]
 
     plt.figure()
-    plt.semilogx(1./(1. + z), Omega_c_i)
     plt.semilogx(1./(1. + z), Omega_m_i)
     plt.semilogx(1./(1. + z), Omega_q_i)
+    plt.show()
+
+    plt.figure()
+    plt.semilogx(1./(1. + z), w_q_i)
     plt.show()
 
 #print quintini(10**7, 0.0, alpha, beta, **cosmo)
